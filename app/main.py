@@ -23,6 +23,7 @@ def read_root():
 def read_root():
     return { "msg": f"Hello {my_name}" }
 
+#code challenge 1
 @app.get("/api/ip", response_class=HTMLResponse)
 def read_items(request: Request):
     public_ip = request.client.host
@@ -33,11 +34,20 @@ def read_items(request: Request):
         </body>
     </html>
     """
-
 @app.get("/api/rawip")
 def read_items(request: Request):
     public_raw_ip = request.client.host
     return {"ip":f"{public_raw_ip}"}
+
+#code challenge 2
+rooms = [{"Number": 101, "Available": "Yes"}, {"Number": 102, "Available": "Yes"}, {"Number": 103, "Available": "No"}, {"Number": 104, "Available": "No"}, {"Number": 105, "Available": "No"}, {"Number": 106, "Available": "Yes"}]
+@app.get("/rooms")
+def hotel_rooms():
+    results = []
+    for room in rooms:
+        if room["Available"] == "Yes":
+            results.append(room)
+    return results
 
 @app.get("/items/{id}")
 def read_item(item_id: int, q: str = None):
