@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.db import get_conn
+from app.db import get_conn, create_schema
 
 #origin
 app = FastAPI()
@@ -14,6 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+create_schema()
 
 #in-class
 my_name = "Kiet"
@@ -51,7 +52,7 @@ rooms = [
     {"Number": 104, "Available": "No", "Room_types": "double_room", "price": 60},
     {"Number": 105, "Available": "No", "Room_types": "single_room", "price": 30},
     {"Number": 106, "Available": "Yes", "Room_types": "single_room", "price": 30}
-    ]
+]
 @app.get("/rooms") #only accept get request
 def get_hotel_rooms():
     results = []
