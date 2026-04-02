@@ -2,9 +2,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+#origin
 app = FastAPI()
-origins = ["*"]
-# origins = ["http://localhost:5500"] 
+origins = ["*"] #accept all origins
+#origins = ["http://localhost:5500"] 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -13,12 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#in-class exercise
 my_name = "Kiet"
-
 @app.get("/")
 def read_root():
     return { "msg": f"testing" }
-
 @app.get("/hello")
 def read_root():
     return { "msg": f"Hello {my_name}" }
@@ -40,14 +40,30 @@ def read_items(request: Request):
     return {"ip":f"{public_raw_ip}"}
 
 #code challenge 2
-rooms = [{"Number": 101, "Available": "Yes"}, {"Number": 102, "Available": "Yes"}, {"Number": 103, "Available": "No"}, {"Number": 104, "Available": "No"}, {"Number": 105, "Available": "No"}, {"Number": 106, "Available": "Yes"}]
-@app.get("/rooms")
-def hotel_rooms():
+rooms = [
+    {"Number": 101, "Available": "Yes", "Room_types": "single_room", "price": 30},
+    {"Number": 102, "Available": "Yes", "Room_types": "double_room", "price": 60},
+    {"Number": 103, "Available": "No", "Room_types": "double_room", "price": 60},
+    {"Number": 104, "Available": "No", "Room_types": "double_room", "price": 60},
+    {"Number": 105, "Available": "No", "Room_types": "single_room", "price": 30},
+    {"Number": 106, "Available": "Yes", "Room_types": "single_room", "price": 30}
+    ]
+@app.get("/rooms") #only accept get request
+def get_hotel_rooms():
     results = []
     for room in rooms:
         if room["Available"] == "Yes":
             results.append(room)
     return results
+@app.get("/hotel")
+def get_hotel():
+    return rooms
+@app.post("/bookings") #only accept post request
+def create_booking():
+    return {"msg":"Booking created!"}
+
+
+
 
 @app.get("/items/{id}")
 def read_item(item_id: int, q: str = None):

@@ -1,2 +1,14 @@
 @apiURL = http://127.0.0.1:8080
+### Get the entire hotel
+GET {{apiURL}}/hotel
+### Get hotel rooms
 GET {{apiURL}}/rooms
+### create bookking
+POST {{apiURL}}/bookings
+Content-Type: application/json
+
+{
+    "room_id": 5,
+    "start_date": "2026-05-01",
+    "end_date": "2026-05-08"
+}
