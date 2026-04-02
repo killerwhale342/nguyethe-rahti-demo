@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.db import get_conn
 
 #origin
 app = FastAPI()
@@ -14,11 +15,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#in-class exercise
+#in-class
 my_name = "Kiet"
 @app.get("/")
 def read_root():
-    return { "msg": f"testing" }
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT version()")
+        result = cur.fetchone() #fetch one row as dictionary
+    return {"msg": f"testing", "db_status":result}
 @app.get("/hello")
 def read_root():
     return { "msg": f"Hello {my_name}" }
