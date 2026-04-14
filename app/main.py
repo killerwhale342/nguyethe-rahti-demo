@@ -7,7 +7,10 @@ from app.db import get_conn, create_schema
 
 #origin
 app = FastAPI()
-origins = ["*"] #accept all origins
+origins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500"
+]
 #origin = ["http://localhost:5500"] 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +26,9 @@ class Booking(BaseModel):
     room_id:int
     date_from:date
     date_to:date
+class Guest(BaseModel):
+    first_name: str
+    last_name: str
 
 #in-class 1
 my_name = "Kiet"
@@ -106,9 +112,36 @@ def create_booking(booking:Booking):
 @app.get("/bookings")
 def get_bookings():
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SELECT * FROM hotel_bookings")
-
-
+        cur.execute("""
+            SELECT 
+                hb.id,
+                hb.date_from,
+                hb.date_to,
+                r.room_number,
+                hg.id AS guest_id,
+                hg.first_name,
+                hg.last_name
+            FROM hotel_bookings hb
+            JOIN rooms r ON r.id = hb.room_id
+            JOIN hotel_guests hg ON hg.id = hb.guest_id
+            ORDER BY hb.date_from DESC
+        """)
+        bookings = cur.fetchall()
+    return bookings
+@app.post("/guests")
+def create_guest(guest: Guest):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO hotel_guests (first_name, last_name, address)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """, [
+            guest.first_name,
+            guest.last_name,
+            "N/A"
+        ])
+        new_guest = cur.fetchone()
+    return {"id": new_guest["id"]}
 
 @app.get("/items/{id}")
 def read_item(item_id: int, q: str = None):
