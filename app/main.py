@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from datetime import date
 from app.db import get_conn, create_schema
 
 #origin
 app = FastAPI()
 origins = ["*"] #accept all origins
-#origins = ["http://localhost:5500"] 
+#origin = ["http://localhost:5500"] 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -15,8 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 create_schema()
+#data model for booking
+class Booking(BaseModel):
+    guest_id:int
+    room_id:int
+    date_from:date
+    date_to:date
 
-#in-class
+#in-class 1
 my_name = "Kiet"
 @app.get("/")
 def read_root():
@@ -27,6 +35,17 @@ def read_root():
 @app.get("/hello")
 def read_root():
     return { "msg": f"Hello {my_name}" }
+#in-class 2
+@app.get("/if/{term}")
+def if_test(term:str): #not necessary but a good practice to define a variable
+    msg = "Default msg"
+    if term == "hello": #parentheses "( )" are not necessary but can be used if the conditions are on next line or combining conditions (and, or)
+        msg = "Hello yourself!" #indentation is important because it defines the block
+    elif term == "hej" or term == "moi" and 1 == 0: 
+        msg = "Hejsan"
+    else:
+        msg = f"I dont understand {term}"
+    return{"msg":msg}
 
 #code challenge 1
 @app.get("/api/ip", response_class=HTMLResponse)
@@ -62,11 +81,32 @@ def get_hotel_rooms():
     return results
 @app.get("/hotel")
 def get_hotel():
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT * FROM rooms")
+        rooms = cur.fetchall()
     return rooms
 @app.post("/bookings") #only accept post request
-def create_booking():
-    return {"msg":"Booking created!"}
-
+def create_booking(booking:Booking):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO hotel_bookings (
+                room_id,
+                guest_id,
+                date_from,
+                date_to
+            ) VALUES (%s,%s,%s,%s) RETURNING *
+        """, [
+            booking.room_id, 
+            booking.guest_id, 
+            booking.date_from, 
+            booking.date_to
+        ])
+        new_booking = cur.fetchone()
+    return {"msg":"Booking created!", "id": new_booking['id'], "room_id": new_booking['room_id']}
+@app.get("/bookings")
+def get_bookings():
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT * FROM hotel_bookings")
 
 
 

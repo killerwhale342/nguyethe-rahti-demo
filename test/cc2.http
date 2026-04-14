@@ -3,12 +3,13 @@
 GET {{apiURL}}/hotel
 ### Get hotel rooms
 GET {{apiURL}}/rooms
-### create bookking
+### create booking
 POST {{apiURL}}/bookings
 Content-Type: application/json
 
 {
-    "room_id": 5,
-    "start_date": "2026-05-01",
-    "end_date": "2026-05-08"
+    "room_id":1,
+    "guest_id":3,
+    "date_from":"2026-04-14",
+    "date_to":"2026-04-30"
 }

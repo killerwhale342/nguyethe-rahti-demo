@@ -17,6 +17,7 @@ def create_schema():
             --add columns
             ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_type VARCHAR;
             ALTER TABLE rooms ADD COLUMN IF NOT EXISTS price NUMERIC(10, 2);
+            ----------
             --code challenge 4
             CREATE TABLE IF NOT EXISTS hotel_guests (
                 id SERIAL PRIMARY KEY,
