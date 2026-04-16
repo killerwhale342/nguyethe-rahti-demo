@@ -85,6 +85,8 @@ def get_hotel_rooms():
         if room["Available"] == "Yes":
             results.append(room)
     return results
+
+#code challenge - lecture 6, 7
 @app.get("/hotel")
 def get_hotel():
     with get_conn() as conn, conn.cursor() as cur:
@@ -117,13 +119,15 @@ def get_bookings():
                 hb.id,
                 hb.date_from,
                 hb.date_to,
+                (date_to - date_from) AS nights,
                 r.room_number,
                 hg.id AS guest_id,
                 hg.first_name,
-                hg.last_name
+                hg.last_name,
+                (date_to - date_from) * r.price AS total_price
             FROM hotel_bookings hb
-            JOIN rooms r ON r.id = hb.room_id
-            JOIN hotel_guests hg ON hg.id = hb.guest_id
+            INNER JOIN rooms r ON r.id = hb.room_id
+            INNER JOIN hotel_guests hg ON hg.id = hb.guest_id
             ORDER BY hb.date_from DESC
         """)
         bookings = cur.fetchall()
@@ -142,6 +146,22 @@ def create_guest(guest: Guest):
         ])
         new_guest = cur.fetchone()
     return {"id": new_guest["id"]}
+@app.get("/guests")
+def get_guest():
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            SELECT 
+                hg.id,
+                hg.first_name,
+                hg.last_name,
+                (SELECT count(*)
+                    FROM hotel_bookings hb
+                    WHERE hb.guest_id = hg.id) AS total_visits
+            FROM hotel_guests hg
+            ORDER BY total_visits DESC
+        """)
+        guests = cur.fetchall()
+    return guests
 
 @app.get("/items/{id}")
 def read_item(item_id: int, q: str = None):

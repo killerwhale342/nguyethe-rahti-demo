@@ -13,3 +13,5 @@ Content-Type: application/json
     "date_from":"2026-04-14",
     "date_to":"2026-04-30"
 }
+### get guests
+GET {{apiURL}}/guests
