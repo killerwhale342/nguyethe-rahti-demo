@@ -39,4 +39,5 @@ def create_schema():
             );
             ----------
             ALTER TABLE hotel_guests ADD COLUMN IF NOT EXISTS api_key VARCHAR DEFAULT encode(gen_random_bytes(32), 'hex');
+            ALTER TABLE hotel_bookings ADD COLUMN IF NOT EXISTS stars INT;
         """)

@@ -22,16 +22,18 @@ app.add_middleware(
 create_schema()
 #data model for booking
 class Booking(BaseModel):
-    guest_id:int
+    #guest_id:int #This will come from api_key
     room_id:int
     date_from:date
     date_to:date
 class Guest(BaseModel):
     first_name:str
     last_name:str
+class BookingUpdate(BaseModel):
+    stars:int
 #api key validation
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-def validate_key(api_key:str=Depends()):
+def validate_key(api_key:str=Depends(api_key_header)):
     if not api_key: 
         raise HTTPException(status_code=401, detail={"error":"API Key is missing!"}) #create an error
     with get_conn() as conn, conn.cursor() as cur:
@@ -41,6 +43,7 @@ def validate_key(api_key:str=Depends()):
         guest = cur.fetchone()
         if not guest:
             raise HTTPException(status_code=401, detail={"error":"Bad API Key!"})
+        return guest
 
 #in-class 1
 my_name = "Kiet"
@@ -51,7 +54,7 @@ def read_root():
         result = cur.fetchone() #fetch one row as dictionary
     return {"msg": f"testing", "db_status":result}
 @app.get("/hello")
-def read_root():
+def hello():
     return { "msg": f"Hello {my_name}" }
 #in-class 2
 @app.get("/if/{term}")
@@ -98,7 +101,7 @@ def get_hotel_rooms():
             results.append(room)
     return results
 
-#code challenge - lecture 6, 7
+#code challenge - lecture 6, 7, 8
 @app.get("/hotel")
 def get_hotel():
     with get_conn() as conn, conn.cursor() as cur:
@@ -106,7 +109,7 @@ def get_hotel():
         rooms = cur.fetchall()
     return rooms
 @app.post("/bookings") #only accept post request
-def create_booking(booking:Booking):
+def create_booking(booking:Booking, guest:dict=Depends(validate_key)):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
             INSERT INTO hotel_bookings (
@@ -117,12 +120,23 @@ def create_booking(booking:Booking):
             ) VALUES (%s,%s,%s,%s) RETURNING *
         """, [
             booking.room_id, 
-            booking.guest_id, 
+            guest['id'], 
             booking.date_from, 
             booking.date_to
         ])
         new_booking = cur.fetchone()
     return {"msg":"Booking created!", "id": new_booking['id'], "room_id": new_booking['room_id']}
+@app.put("/bookings/{id}")
+def update_bookings(id:int, updatehb:BookingUpdate, guest:dict=Depends(validate_key)):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            UPDATE hotel_bookings
+            SET stars = %s
+            WHERE id = %s AND guest_id = %s
+            RETURNING *
+        """, [updatehb.stars, id, guest["id"]])
+        updated = cur.fetchone()
+    return updated
 @app.get("/bookings")
 def get_bookings(guest:dict=Depends(validate_key)):
     print(guest)
@@ -141,8 +155,9 @@ def get_bookings(guest:dict=Depends(validate_key)):
             FROM hotel_bookings hb
             INNER JOIN rooms r ON r.id = hb.room_id
             INNER JOIN hotel_guests hg ON hg.id = hb.guest_id
+            WHERE hb.guest_id = %s
             ORDER BY hb.date_from DESC
-        """)
+        """, [guest['id']])
         bookings = cur.fetchall()
     return bookings
 @app.post("/guests")
@@ -160,7 +175,7 @@ def create_guest(guest: Guest):
         new_guest = cur.fetchone()
     return {"id": new_guest["id"]}
 @app.get("/guests")
-def get_guest():
+def get_guest(guest:dict=Depends(validate_key)):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
             SELECT 
@@ -175,6 +190,9 @@ def get_guest():
         """)
         guests = cur.fetchall()
     return guests
+
+
+
 
 @app.get("/items/{id}")
 def read_item(item_id: int, q: str = None):
