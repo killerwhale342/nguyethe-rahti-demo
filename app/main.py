@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.security import APIKeyHeader
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,11 +8,10 @@ from app.db import get_conn, create_schema
 
 #origin
 app = FastAPI()
-origins = [
-    "http://127.0.0.1:5500",
-    "http://localhost:5500"
-]
+origins = ["*"]
 #origin = ["http://localhost:5500"] 
+#"http://127.0.0.1:5500",
+#"http://localhost:5500"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -27,8 +27,20 @@ class Booking(BaseModel):
     date_from:date
     date_to:date
 class Guest(BaseModel):
-    first_name: str
-    last_name: str
+    first_name:str
+    last_name:str
+#api key validation
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+def validate_key(api_key:str=Depends()):
+    if not api_key: 
+        raise HTTPException(status_code=401, detail={"error":"API Key is missing!"}) #create an error
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            SELECT * FROM hotel_guests WHERE api_key = %s
+        """, [api_key])
+        guest = cur.fetchone()
+        if not guest:
+            raise HTTPException(status_code=401, detail={"error":"Bad API Key!"})
 
 #in-class 1
 my_name = "Kiet"
@@ -112,7 +124,8 @@ def create_booking(booking:Booking):
         new_booking = cur.fetchone()
     return {"msg":"Booking created!", "id": new_booking['id'], "room_id": new_booking['room_id']}
 @app.get("/bookings")
-def get_bookings():
+def get_bookings(guest:dict=Depends(validate_key)):
+    print(guest)
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
             SELECT 
