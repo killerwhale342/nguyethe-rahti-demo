@@ -41,3 +41,37 @@ def create_schema():
             ALTER TABLE hotel_guests ADD COLUMN IF NOT EXISTS api_key VARCHAR DEFAULT encode(gen_random_bytes(32), 'hex');
             ALTER TABLE hotel_bookings ADD COLUMN IF NOT EXISTS stars INT;
         """)
+        print("DB schema created") #checkpoint for error
+        cur.execute("DROP VIEW IF EXISTS bookings_view;")
+        cur.execute("""
+            CREATE VIEW bookings_view AS
+                SELECT 
+                    hb.id,
+                    hb.date_from,
+                    hb.date_to,
+                    (date_to - date_from) AS nights,
+                    r.room_number,
+                    hg.id AS guest_id,
+                    hg.first_name,
+                    hg.last_name,
+                    (date_to - date_from) * r.price AS total_price,
+                    hb.stars,
+                    hb.other_info
+                FROM hotel_bookings hb
+                INNER JOIN rooms r ON r.id = hb.room_id
+                INNER JOIN hotel_guests hg ON hg.id = hb.guest_id;
+        """)
+        print("Booking View created") #checkpoint for error
+        cur.execute("DROP VIEW IF EXISTS guests_view;")
+        cur.execute("""
+            CREATE VIEW guests_view AS
+                SELECT 
+                    hg.id,
+                    hg.first_name,
+                    hg.last_name,
+                    (SELECT count(*)
+                        FROM hotel_bookings hb
+                        WHERE hb.guest_id = hg.id) AS total_visits
+                FROM hotel_guests hg;
+        """)
+        print("Guest View created") #checkpoint for error

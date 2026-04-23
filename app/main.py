@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from html import escape
 from datetime import date
 from app.db import get_conn, create_schema
 
@@ -26,6 +27,7 @@ class Booking(BaseModel):
     room_id:int
     date_from:date
     date_to:date
+    other_info:str
 class Guest(BaseModel):
     first_name:str
     last_name:str
@@ -116,13 +118,15 @@ def create_booking(booking:Booking, guest:dict=Depends(validate_key)):
                 room_id,
                 guest_id,
                 date_from,
-                date_to
-            ) VALUES (%s,%s,%s,%s) RETURNING *
+                date_to,
+                other_info
+            ) VALUES (%s,%s,%s,%s,%s) RETURNING *
         """, [
             booking.room_id, 
             guest['id'], 
             booking.date_from, 
-            booking.date_to
+            booking.date_to,
+            escape(booking.other_info)
         ])
         new_booking = cur.fetchone()
     return {"msg":"Booking created!", "id": new_booking['id'], "room_id": new_booking['room_id']}
@@ -144,22 +148,9 @@ def get_bookings(guest:dict=Depends(validate_key)):
     print(guest)
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
-            SELECT 
-                hb.id,
-                hb.date_from,
-                hb.date_to,
-                (date_to - date_from) AS nights,
-                r.room_number,
-                hg.id AS guest_id,
-                hg.first_name,
-                hg.last_name,
-                (date_to - date_from) * r.price AS total_price,
-                hb.stars
-            FROM hotel_bookings hb
-            INNER JOIN rooms r ON r.id = hb.room_id
-            INNER JOIN hotel_guests hg ON hg.id = hb.guest_id
-            WHERE hb.guest_id = %s
-            ORDER BY hb.date_from DESC
+            SELECT * FROM bookings_view
+            WHERE guest_id = %s
+            ORDER BY date_from DESC
         """, [guest['id']])
         bookings = cur.fetchall()
     return bookings
@@ -170,25 +161,14 @@ def create_guest(guest: Guest):
             INSERT INTO hotel_guests (first_name, last_name, address)
             VALUES (%s, %s, %s)
             RETURNING id
-        """, [
-            guest.first_name,
-            guest.last_name,
-            "N/A"
-        ])
+        """, [guest.first_name, guest.last_name, "N/A"])
         new_guest = cur.fetchone()
     return {"id": new_guest["id"]}
 @app.get("/guests")
 def get_guest(guest:dict=Depends(validate_key)):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
-            SELECT 
-                hg.id,
-                hg.first_name,
-                hg.last_name,
-                (SELECT count(*)
-                    FROM hotel_bookings hb
-                    WHERE hb.guest_id = hg.id) AS total_visits
-            FROM hotel_guests hg
+            SELECT * FROM guest_view
             ORDER BY total_visits DESC
         """)
         guests = cur.fetchall()
