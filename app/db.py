@@ -75,3 +75,15 @@ def create_schema():
                 FROM hotel_guests hg;
         """)
         print("Guest View created") #checkpoint for error
+        cur.execute("""
+            DROP VIEW IF EXISTS sales_view;
+            CREATE VIEW sales_view AS
+                SELECT 
+                    SUM((hb.date_to - hb.date_from) * r.price) AS revenue,
+                    SUM(hb.date_to - hb.date_from) AS number_of_nights,
+                    COUNT(*) AS number_of_booking
+                FROM hotel_bookings hb
+                INNER JOIN rooms r ON r.id = hb.room_id
+                INNER JOIN hotel_guests hg ON hg.id = hb.guest_id;
+        """)
+        print("Sales View created") #checkpoint for error
