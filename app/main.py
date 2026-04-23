@@ -131,11 +131,13 @@ def update_bookings(id:int, updatehb:BookingUpdate, guest:dict=Depends(validate_
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
             UPDATE hotel_bookings
-            SET stars = %s
+                SET stars = %s
             WHERE id = %s AND guest_id = %s
             RETURNING *
         """, [updatehb.stars, id, guest["id"]])
         updated = cur.fetchone()
+        if not updated:
+            raise HTTPException(status_code=404, detail={"error":"Booking Not Found!"})
     return updated
 @app.get("/bookings")
 def get_bookings(guest:dict=Depends(validate_key)):
@@ -151,7 +153,8 @@ def get_bookings(guest:dict=Depends(validate_key)):
                 hg.id AS guest_id,
                 hg.first_name,
                 hg.last_name,
-                (date_to - date_from) * r.price AS total_price
+                (date_to - date_from) * r.price AS total_price,
+                hb.stars
             FROM hotel_bookings hb
             INNER JOIN rooms r ON r.id = hb.room_id
             INNER JOIN hotel_guests hg ON hg.id = hb.guest_id
